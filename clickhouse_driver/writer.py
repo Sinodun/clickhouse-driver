@@ -42,13 +42,14 @@ def write_varint(number, buf):
     """
     Writes integer of variable length using LEB128.
     """
+    write = buf.write
     while True:
         towrite = number & 0x7f
         number >>= 7
         if number:
-            buf.write(_byte(towrite | 0x80))
+            write(_byte(towrite | 0x80))
         else:
-            buf.write(_byte(towrite))
+            write(_byte(towrite))
             break
 
 

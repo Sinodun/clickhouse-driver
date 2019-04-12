@@ -1,6 +1,4 @@
-
-from .. import errors
-from ..writer import write_varint
+from .. import defines, errors
 from ..util import compat
 from .base import Column
 
@@ -22,12 +20,29 @@ class String(Column):
             return value, False
 
     def write_items(self, items, buf):
+        items_buf = bytearray()
+
         for value in items:
             if not isinstance(value, bytes):
                 value = utf_8_encode(value)[0]
 
-            write_varint(len(value), buf)
-            buf.write(value)
+            # writer.write_varint in-place.
+            value_len = len(value)
+            while True:
+                towrite = value_len & 0x7f
+                value_len >>= 7
+                if value_len:
+                    items_buf.append(towrite | 0x80)
+                else:
+                    items_buf.append(towrite)
+                    break
+
+            items_buf.extend(value)
+            if len(items_buf) > defines.BUFFER_SIZE:
+                buf.write(items_buf)
+                items_buf = bytearray()
+
+        buf.write(items_buf)
 
     def read_items(self, n_items, buf):
         return buf.read_strings(n_items, decode=True)
@@ -38,9 +53,26 @@ class ByteString(String):
     null_value = b''
 
     def write_items(self, items, buf):
+        items_buf = bytearray()
+
         for value in items:
-            write_varint(len(value), buf)
-            buf.write(value)
+            # writer.write_varint in-place.
+            value_len = len(value)
+            while True:
+                towrite = value_len & 0x7f
+                value_len >>= 7
+                if value_len:
+                    items_buf.append(towrite | 0x80)
+                else:
+                    items_buf.append(towrite)
+                    break
+
+            items_buf.extend(value)
+            if len(items_buf) > defines.BUFFER_SIZE:
+                buf.write(items_buf)
+                items_buf = bytearray()
+
+        buf.write(items_buf)
 
     def read_items(self, n_items, buf):
         return buf.read_strings(n_items)
