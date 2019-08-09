@@ -1,11 +1,10 @@
 from calendar import timegm
-from datetime import datetime
+from datetime import datetime, timezone
 from time import mktime
-
-from pytz import timezone as get_timezone, utc
 
 from .base import FormatColumn
 
+timezones = { 'Zulu': timezone.utc }
 
 class DateTimeColumn(FormatColumn):
     ch_type = 'DateTime'
@@ -29,15 +28,15 @@ class DateTimeColumn(FormatColumn):
         if self.timezone:
             # Set server's timezone for offset-naive datetime.
             if value.tzinfo is None:
-                value = self.timezone.localize(value)
+                value = value.replace(tzinfo=self.timezone)
 
-            value = value.astimezone(utc)
+            value = value.astimezone(timezone.utc)
             return int(timegm(value.timetuple()))
 
         else:
             # If datetime is offset-aware use it's timezone.
             if value.tzinfo is not None:
-                value = value.astimezone(utc)
+                value = value.astimezone(timezone.utc)
                 return int(timegm(value.timetuple()))
 
             return int(mktime(value.timetuple()))
@@ -56,6 +55,9 @@ def create_datetime_column(spec, column_options):
             tz_name = context.server_info.timezone
 
     if tz_name:
-        timezone = get_timezone(tz_name)
+        timezone = timezones[tz_name]
 
     return DateTimeColumn(timezone=timezone, **column_options)
+
+def set_timezone(name, tz):
+    timezones[name] = tz
