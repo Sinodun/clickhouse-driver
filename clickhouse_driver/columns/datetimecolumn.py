@@ -4,7 +4,7 @@ from time import mktime
 
 from .base import FormatColumn
 
-timezones = { 'Zulu': timezone.utc }
+timezones = { 'Zulu': timezone.utc, 'UTC': timezone.utc }
 
 class DateTimeColumn(FormatColumn):
     ch_type = 'DateTime'
